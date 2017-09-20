@@ -126,6 +126,7 @@ iarch(){
   foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc' AND COLL_NAME like '*tar%'){
    dmg(*row.DATA_PATH, *svr);
    attr(*row.DATA_PATH, *svr);
+   *dmfs=attr(*row.DATA_PATH, *svr);
    writeLine("stdout","*tar is currently in state: (*dmfs). Queued for staging to disk. Only REG or DUL may be accessed.");
   }#foreach
  }#if
