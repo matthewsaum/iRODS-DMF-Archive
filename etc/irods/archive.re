@@ -21,6 +21,7 @@
 #TO-DO:
 #Size limitations? Min/max?
 #Possibly force .tar-ball of data before placed on archive resource?
+#Auto queue a "dmput"and add a new command? Faster placement to tape, without waiting on DMF policy.
 
 
 
