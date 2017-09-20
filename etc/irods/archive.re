@@ -30,7 +30,8 @@
 # the other is required by operations here. It is our DMF status.
 #This is to prevent iRODS from trying to read data on tape without being staged to disk.
 acPostProcForPut {
- if($rescName like "Archive"){
+ *resc="Archive";
+ if($rescName like *resc){
   msiAddKeyVal(*Key1,"SURF-BFID","NewData");
   msiSetKeyValuePairsToObj(*Key1,$objPath,"-d");
   msiAddKeyVal(*Key2,"SURF-DMF","NewData");
@@ -46,7 +47,7 @@ acPostProcForPut {
 #per each file, until interrupted.
 pep_resource_open_pre(*OUT){
  #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
- *svr="sara-irods1.grid.surfsara.nl";
+ *svr="<your.resource.com>";
  *resc="Archive";
  if($KVPairs.resc_hier like *resc){
   #Clean copy of the physical path and logical path
@@ -75,7 +76,7 @@ pep_resource_open_pre(*OUT){
 #The update is done each time the commands are called as well.
 delay("<ET>04:30:00</ET><EF></EF>"){
  #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
- *svr="sara-irods1.grid.surfsara.nl";
+ *svr="your.resource.com";
  *resc="Archive";
  foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc'){
   *dpath=*row.DATA_PATH;
@@ -89,8 +90,8 @@ iarch(){
  #called via irule: irule iarch "*tar=/target/collection/or/object" "ruleExecOut"
  #*tar must be defined upon input
  #REQUIRED DEFINITIONS:
- #The SURFsara Archive Resource Server
- *svr="sara-irods1.grid.surfsara.nl";
+ #The Archive Resource Server
+ *svr="your.resource.com";
  #The SURFsara Archive Resource Name mapped over the NFS link
  *resc="Archive";
  #This runs our target from user input to trim any trailing "/" and verify absolute paths
