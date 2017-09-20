@@ -1,0 +1,9 @@
+#!/bin/sh
+#belongs in:
+#irods~/iRODS/server/bin/cmd/dmget
+#This is on our Archive Resource Server, called by the archive rules
+#This is needed to stage data from tape to disk for iRODS to read bit streams
+#the $1 is the arguments input from the msiExecCmd called in the rule
+#the -a is to update the files last access time on the disk cache in DMF.
+#The -q is to queue the request. This prevents serialization of data requests.
+dmget -qa $1
