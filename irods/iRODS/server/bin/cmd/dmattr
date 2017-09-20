@@ -1,0 +1,4 @@
+#!/bin/sh
+#echo "execCmdRule: "$execCmdRule
+#Our awk follow-up pulls two fields from the DMATTR reults: the BFID for tape location, and the DMF status.
+dmattr $1 | awk '{print $1, $12}'
