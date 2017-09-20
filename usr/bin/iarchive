@@ -1,0 +1,1 @@
+irule iarch "*tar=$1" "ruleExecOut"
