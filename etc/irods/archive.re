@@ -11,7 +11,7 @@
 #see the dmget and dmattr man pages for details.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #REQUIRED VARIABLES TO BE DEFINED:
-#*svr and *resc, found in "pep_resource_open_pre", "delay", and "iarch"
+#*svr and *resc, found in "acpostProcForPut", "pep_resource_open_pre", "delay", and "iarch"
 #These are the same defintions, needed by separate functions.
 #*svr="The name of the iRODS resource server connected to the archive"
 #*resc="the name of the archive resource"
