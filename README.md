@@ -34,6 +34,7 @@ For simplicity, my resource is called "Archive". When data is put into the Archi
 
 # Legal Details
 Author- Matthew Saum (SURFsara)
+
 License Copyright 2017 SURFsara BV
 
 Licensed under the Apache License, Version 2.0 (the “License”); you may not use this file except in compliance with the License. You may obtain a copy of the License at
