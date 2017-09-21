@@ -31,3 +31,13 @@ Install the rule file into your iRODS instance, add it to the rulebase set in se
  
 # Testing
 For simplicity, my resource is called "Archive". When data is put into the Archive resource, it will bounce off the resource server connected via NFS and go straight to the CXFS system in DMF. This means the required storage space on a dedicated iRODS link is fairly low. Once data is on the DMF system, various policies will copy it to tape eventually. Mine is roughly "within an hour". The DMF disk space is a cache, frequently purged to allow staging. Ours is done by "last accessed" data goes first. This makes it possible that the inode is visible by iRODS, but the data is not since it is not on disk anymore. In this case, iRODS sends a request every few seconds, per file, until interrupted. So we interrupt access to non-staged data before that in our rules. We also give users the ability to queue up staging the data from tape to disk again, via the "iarch" function of the ruleset.
+
+# Legal Details
+Author- Matthew Saum (SURFsara)
+License Copyright 2017 SURFsara BV
+
+Licensed under the Apache License, Version 2.0 (the “License”); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
