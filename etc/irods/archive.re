@@ -66,7 +66,7 @@ pep_resource_open_pre(*OUT){
    #If DMF status is not staged, we display the current status and error out, preventing data access.
    else{
     cut;
-    msiExit("-1","*ipath (*mv) is still on tape. Please use iarchive to stage to disk.");
+    msiExit("-1","Data requested is still on tape. Please use iarchive to stage to disk.");
    }#else
   }#foreach
  }#if
