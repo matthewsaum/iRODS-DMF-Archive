@@ -164,13 +164,13 @@ attr(*data, *svr){
    *mv=*boat.META_DATA_ATTR_VALUE;
    #Checking that BFID matches, correcting if not
    if(*mn like 'SURF-BFID' && str(*mv) not like str(*bfid)){
-    writeLine("serverLog","*mn not *mv matched to *bfid");
+    writeLine("serverLog","*ipath *mn not *mv changed to *bfid");
     msiAddKeyVal(*Keyval,*mn,*bfid);
     msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
    }#bfid if
    #Checking that DMF Status matches, correcting if not
    if(*mn like 'SURF-DMF' && str(*mv) not like str(*dmfs)){
-    writeLine("serverLog","*mn not *mv matched to *dmfs");
+    writeLine("serverLog","*ipath *mn not *mv changed to *dmfs");
     msiAddKeyVal(*Keyval,*mn,*dmfs);
     msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
    }#dmfstat if
