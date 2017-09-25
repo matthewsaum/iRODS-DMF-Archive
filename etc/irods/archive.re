@@ -21,7 +21,8 @@
 #TO-DO:
 #Size limitations? Min/max?
 #Possibly force .tar-ball of data before placed on archive resource?
-#Auto queue a "dmput"and add a new command? Faster placement to tape, without waiting on DMF policy.
+#User Prompt for DMF status only- to check status of data between disk and tape?
+#Grab a percentage value for feedback on how much is moved between tape and disk. DMATTR shows it, can be done.
 
 
 
