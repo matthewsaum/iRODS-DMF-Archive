@@ -1,1 +1,1 @@
-irule iarch "*tar=$1%*onp=0"  "ruleExecOut"
+irule iarch "*tar=$1"  "ruleExecOut"
