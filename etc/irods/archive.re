@@ -117,7 +117,7 @@ iarch(){
    #runs the DMGET Staging and iget function
    dmg(*row.DATA_PATH, *svr);
    *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*tar is currently in state: *dmfs Queued for staging to disk. Only REG or DUL may be accessed.");
+   writeLine("stdout","*tar is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
   }#foreach
  }#if
 
@@ -128,7 +128,7 @@ iarch(){
    dmg(*row.DATA_PATH, *svr);
    attr(*row.DATA_PATH, *svr);
    *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*tar is currently in state: (*dmfs). Queued for staging to disk. Only REG or DUL may be accessed.");
+   writeLine("stdout","*tar is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
   }#foreach
  }#if
 
@@ -197,5 +197,5 @@ attr(*data, *svr){
   }#metadata
  }#object
  #Our return sentence of status
- "(*dmfs) with *dma% staged from tape.";
+ "(*dmfs) with *dma% staged from tape";
 }#attr
