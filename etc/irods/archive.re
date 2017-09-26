@@ -160,21 +160,13 @@ attr(*data, *svr){
   #trim the newline
   *Out=trimr(*Out,'\n');
   #DMF BFID, trims from right to left, to and including the + symbol
-  *bfid=trimr(*Out,'+');
-  *bfid=trimr(*bfid,'+');
-  *bfid=trimr(*bfid,'+');
+  *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');
   #DMF STATUS, trims up the DMF status only
-  *dmfs=triml(*Out,'+');
-  *dmfs=trimr(*dmfs,'+');
-  *dmfs=trimr(*dmfs,'+');
+  *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');
   #trims to the total file size in DMF
-  *dmt=triml(*Out,'+');
-  *dmt=triml(*dmt,'+');
-  *dmt=triml(*dmt,'+');
+  *dmt=triml(triml(triml(*Out,'+'),'+'),'+');
   #trims to the available file size on disk
-  *dma=triml(*Out,'+');
-  *dma=triml(*dma,'+');
-  *dma=trimr(*dma,'+');
+  *dma=trimr(triml(triml(*Out,'+'),'+'),'+');
   #Give us a % of completed migration from tape to disk
   *mig=double(*dma)/double(*dmt)*100;
   *dma=trimr("*mig", '.');
