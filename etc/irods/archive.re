@@ -16,8 +16,8 @@
 #*svr="The name of the iRODS resource server connected to the archive"
 #*resc="the name of the archive resource"
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#Version 1.0- First fully functional version
-#Version 1.1- Now includes a % based feedback of staging
+#1.0- 20Sept2017-First fully functional version
+#1.1- 26Sept2017-Now includes a % based feedback of staging and some code scrubbing to clean up functions.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
@@ -73,18 +73,6 @@ pep_resource_open_pre(*OUT){
  }#if
 }#PEP
 
-
-#This is a delayed rule to run every day at 04:30 to check DMF status passively.
-#The update is done each time the commands are called as well.
-delay("<ET>04:30:00</ET><EF></EF>"){
- #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
- *svr="your.resource.FQDN";
- *resc="Archive";
- foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc'){
-  *dpath=*row.DATA_PATH;
-  attr(*dpath, *svr);
- }#foreach
-}#delay
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #Our iarchive rule. This is used to stage data from tape to disk.
