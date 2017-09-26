@@ -17,18 +17,18 @@
 #*resc="the name of the archive resource"
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #Version 1.0- First fully functional version
+#Version 1.1- Now includes a % based feedback of staging
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
 #Possibly force .tar-ball of data before placed on archive resource?
 #User Prompt for DMF status only- to check status of data between disk and tape?
-#Grab a percentage value for feedback on how much is moved between tape and disk. DMATTR shows it, can be done.
 
 
 
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#this creates two meta-data tags, one for the DMF BFID, which is good record keeping. 
+#this creates two meta-data tags, one for the DMF BFID, which is good record keeping.
 # the other is required by operations here. It is our DMF status.
 #This is to prevent iRODS from trying to read data on tape without being staged to disk.
 acPostProcForPut {
@@ -45,11 +45,11 @@ acPostProcForPut {
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #This is our Policy Enforcement Point for preventing iRODS from reading data
 #that has not been staged to disk. This is because if the data is not on disk,
-#but iRODS tries to access it, DMF is flooded by 1 request every 3 seconds, 
+#but iRODS tries to access it, DMF is flooded by 1 request every 3 seconds,
 #per each file, until interrupted.
 pep_resource_open_pre(*OUT){
  #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
- *svr="<your.resource.com>";
+ *svr="your.resource.FQDN";
  *resc="Archive";
  if($KVPairs.resc_hier like *resc){
   #Clean copy of the physical path and logical path
@@ -78,7 +78,7 @@ pep_resource_open_pre(*OUT){
 #The update is done each time the commands are called as well.
 delay("<ET>04:30:00</ET><EF></EF>"){
  #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
- *svr="your.resource.com";
+ *svr="your.resource.FQDN";
  *resc="Archive";
  foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc'){
   *dpath=*row.DATA_PATH;
@@ -93,7 +93,7 @@ iarch(){
  #*tar must be defined upon input
  #REQUIRED DEFINITIONS:
  #The Archive Resource Server
- *svr="your.resource.com";
+ *svr="your.resource.FQDN";
  #The SURFsara Archive Resource Name mapped over the NFS link
  *resc="Archive";
  #This runs our target from user input to trim any trailing "/" and verify absolute paths
@@ -117,7 +117,7 @@ iarch(){
    #runs the DMGET Staging and iget function
    dmg(*row.DATA_PATH, *svr);
    *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*tar is currently in state: (*dmfs). Queued for staging to disk. Only REG or DUL may be accessed.");
+   writeLine("stdout","*tar is currently in state: *dmfs Queued for staging to disk. Only REG or DUL may be accessed.");
   }#foreach
  }#if
 
@@ -155,10 +155,29 @@ attr(*data, *svr){
   *iid=*row.DATA_ID;
   msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
   msiGetStdoutInExecCmdOut(*dmRes,*Out);
-  #DMF BFID, trims from right to left, to and including the space,
-  *bfid=trimr(*Out,' ');
-  #DMF STATUS, trims the left to the space, including, and then drops our newline on the end,
-  *dmfs=substr(triml(*Out,' '),0,3);
+  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
+  # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
+  #trim the newline
+  *Out=trimr(*Out,'\n');
+  #DMF BFID, trims from right to left, to and including the + symbol
+  *bfid=trimr(*Out,'+');
+  *bfid=trimr(*bfid,'+');
+  *bfid=trimr(*bfid,'+');
+  #DMF STATUS, trims up the DMF status only
+  *dmfs=triml(*Out,'+');
+  *dmfs=trimr(*dmfs,'+');
+  *dmfs=trimr(*dmfs,'+');
+  #trims to the total file size in DMF
+  *dmt=triml(*Out,'+');
+  *dmt=triml(*dmt,'+');
+  *dmt=triml(*dmt,'+');
+  #trims to the available file size on disk
+  *dma=triml(*Out,'+');
+  *dma=triml(*dma,'+');
+  *dma=trimr(*dma,'+');
+  #Give us a % of completed migration from tape to disk
+  *mig=double(*dma)/double(*dmt)*100;
+  *dma=trimr("*mig", '.');
   #compares our two metadatas
   foreach(*boat in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE where DATA_ID = *iid){
    *mn=*boat.META_DATA_ATTR_NAME;
@@ -177,5 +196,6 @@ attr(*data, *svr){
    }#dmfstat if
   }#metadata
  }#object
- *dmfs;
+ #Our return sentence of status
+ "(*dmfs) with *dma% staged from tape.";
 }#attr
