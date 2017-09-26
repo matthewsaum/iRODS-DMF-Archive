@@ -55,21 +55,17 @@ pep_resource_open_pre(*OUT){
   #Clean copy of the physical path and logical path
   *dpath=$KVPairs.physical_path;
   *ipath=$KVPairs.logical_path;
-  #fresh update of the DMF status meta data value
-  attr(*dpath, *svr);
-  #Selects our DMF status and checks it
-  foreach(*row in SELECT META_DATA_ATTR_VALUE where DATA_PATH like *dpath and META_DATA_ATTR_NAME like 'SURF-DMF'){
-   *mv=*row.META_DATA_ATTR_VALUE;
-   #Checking for DMF availability, logging if status is staged to disk.
-   if ((*mv like "REG") || (*mv like "DUL")){
-    writeLine("serverLog","$userNameClient:$clientAddr copied *dpath (*mv) from the Archive.");
-   }#if
-   #If DMF status is not staged, we display the current status and error out, preventing data access.
-   else{
-    cut;
-    msiExit("-1","Data requested is still on tape. Please use iarchive to stage to disk.");
-   }#else
-  }#foreach
+  #fresh update of the DMF status meta data value. Runs the attr function, gives us the status from teh return string.
+  *mv=substr(attr(*dpath, *svr), 1, 3);
+  #Checking for DMF availability, logging if status is staged to disk.
+  if ((*mv like "REG") || (*mv like "DUL")){
+   writeLine("serverLog","$userNameClient:$clientAddr copied *dpath (*mv) from the Archive.");
+  }#if
+  #If DMF status is not staged, we display the current status and error out, preventing data access.
+  else{
+   cut;
+   msiExit("-1","Data requested is still on tape. Please use iarchive to stage to disk.");
+  }#else
  }#if
 }#PEP
 
@@ -114,7 +110,6 @@ iarch(){
   #Pulls all data paths for items that are on the Archive resource and within a target collection, including sub-collections.
   foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc' AND COLL_NAME like '*tar%'){
    dmg(*row.DATA_PATH, *svr);
-   attr(*row.DATA_PATH, *svr);
    *dmfs=attr(*row.DATA_PATH, *svr);
    writeLine("stdout","*tar is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
   }#foreach
