@@ -3,4 +3,4 @@
 # the -a updates the access time of the file with the current time. Important for DMF disk cache, as it releases data based on oldest-accessed
 # the -q queues the request. This allows us to use DMF efficiently by queuing several requsts at once
 #The awk pulls our various values. $1 is the BFID, $12 is the DMF state, $11 is the amount bytes on disk, $10 is the total size.
-dmattr $1 | awk '{print $1, $12}'
+dmattr $1 | awk '{print $1, $12, $11, $10}' | tr " " "+"
