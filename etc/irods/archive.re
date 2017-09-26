@@ -150,44 +150,38 @@ dmg(*data, *svr){
 #That data is: The BFID of the data on tape, and the DMF Status
 #INPUT ORDER- *target object by DATA_PATH, *archive server name
 attr(*data, *svr){
- foreach(*row in SELECT DATA_PATH, DATA_NAME, COLL_NAME, DATA_ID where DATA_PATH like *data){
-  *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
-  *iid=*row.DATA_ID;
-  msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
-  msiGetStdoutInExecCmdOut(*dmRes,*Out);
-  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
-  # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
-  #trim the newline
-  *Out=trimr(*Out,'\n');
-  #DMF BFID, trims from right to left, to and including the + symbol
-  *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');
-  #DMF STATUS, trims up the DMF status only
-  *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');
-  #trims to the total file size in DMF
-  *dmt=triml(triml(triml(*Out,'+'),'+'),'+');
-  #trims to the available file size on disk
-  *dma=trimr(triml(triml(*Out,'+'),'+'),'+');
-  #Give us a % of completed migration from tape to disk
-  *mig=double(*dma)/double(*dmt)*100;
-  *dma=trimr("*mig", '.');
-  #compares our two metadatas
-  foreach(*boat in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE where DATA_ID = *iid){
-   *mn=*boat.META_DATA_ATTR_NAME;
-   *mv=*boat.META_DATA_ATTR_VALUE;
-   #Checking that BFID matches, correcting if not
-   if(*mn like 'SURF-BFID' && str(*mv) not like str(*bfid)){
-    writeLine("serverLog","*ipath *mn not *mv changed to *bfid");
-    msiAddKeyVal(*Keyval,*mn,*bfid);
-    msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
-   }#bfid if
-   #Checking that DMF Status matches, correcting if not
-   if(*mn like 'SURF-DMF' && str(*mv) not like str(*dmfs)){
-    writeLine("serverLog","*ipath *mn not *mv changed to *dmfs");
-    msiAddKeyVal(*Keyval,*mn,*dmfs);
-    msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
-   }#dmfstat if
-  }#metadata
- }#object
+ msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
+ msiGetStdoutInExecCmdOut(*dmRes,*Out);
+ # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
+ # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
+ #trim the newline
+ *Out=trimr(*Out,'\n');
+ #DMF BFID, trims from right to left, to and including the + symbol
+ *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');
+ #DMF STATUS, trims up the DMF status only
+ *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');
+ #trims to the total file size in DMF
+ *dmt=triml(triml(triml(*Out,'+'),'+'),'+');
+ #trims to the available file size on disk
+ *dma=trimr(triml(triml(*Out,'+'),'+'),'+');
+ #Give us a % of completed migration from tape to disk
+ *mig=double(*dma)/double(*dmt)*100;
+ *dma=trimr("*mig", '.');
+ #compares our two metadatas
+ foreach(*boat in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE where DATA_PATH like *data){
+  *mn=*boat.META_DATA_ATTR_NAME;
+  *mv=*boat.META_DATA_ATTR_VALUE;
+  #Checking that BFID matches, correcting if not
+  if(*mn like 'SURF-BFID' && str(*mv) not like str(*bfid)){
+   msiAddKeyVal(*Keyval,*mn,*bfid);
+   msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
+  }#bfid if
+  #Checking that DMF Status matches, correcting if not
+  if(*mn like 'SURF-DMF' && str(*mv) not like str(*dmfs)){
+   msiAddKeyVal(*Keyval,*mn,*dmfs);
+   msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
+  }#dmfstat if
+ }#metadata
  #Our return sentence of status
  "(*dmfs) with *dma% staged from tape";
 }#attr
