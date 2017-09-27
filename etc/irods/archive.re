@@ -109,9 +109,10 @@ iarch(){
  if (*tarCD like '-c'){
   #Pulls all data paths for items that are on the Archive resource and within a target collection, including sub-collections.
   foreach(*row in SELECT DATA_PATH, COLL_NAME, DATA_NAME where RESC_NAME like '*resc' AND COLL_NAME like '*tar%'){
+   *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
    dmg(*row.DATA_PATH, *svr);
    *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*row.COLL_NAME/*row.DATA_NAME is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
+   writeLine("stdout","*ipath is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
   }#foreach
  }#if
 
