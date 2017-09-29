@@ -51,12 +51,12 @@ pep_resource_open_pre(*OUT){
  #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
  *svr="your.resource.FQDN";
  *resc="Archive";
- if($KVPairs.resc_hier like *resc){
+ if($KVPairs.resc_hier like *resc && $connectOption != "iput"){
   #Clean copy of the physical path and logical path
   *dpath=$KVPairs.physical_path;
   *ipath=$KVPairs.logical_path;
   #fresh update of the DMF status meta data value. Runs the attr function, gives us the status from teh return string.
-  *mv=substr(attr(*dpath, *svr), 1, 3);
+  *mv=substr(attr(*dpath, *svr), 1, 4);
   #Checking for DMF availability, logging if status is staged to disk.
   if ((*mv like "REG") || (*mv like "DUL")){
    writeLine("serverLog","$userNameClient:$clientAddr copied *dpath (*mv) from the Archive.");
@@ -152,7 +152,8 @@ attr(*data, *svr){
  *mig=double(*dma)/double(*dmt)*100;
  *dma=trimr("*mig", '.');
  #compares our two metadatas
- foreach(*boat in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE where DATA_PATH like *data){
+ foreach(*boat in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE, COLL_NAME, DATA_NAME where DATA_PATH like *data){
+  *ipath=*boat.COLL_NAME++"/"++*boat.DATA_NAME;
   *mn=*boat.META_DATA_ATTR_NAME;
   *mv=*boat.META_DATA_ATTR_VALUE;
   #Checking that BFID matches, correcting if not
