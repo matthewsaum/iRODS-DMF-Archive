@@ -18,6 +18,8 @@
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #1.0- 20Sept2017-First fully functional version
 #1.1- 26Sept2017-Now includes a % based feedback of staging and some code scrubbing to clean up functions.
+#1.2- 29Sept2017-Bug fix in PEP enforcement on what "open" means in iRODS, display better output in iGet interrupt
+#1.3- 02Oct2017- Included user input for options.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
@@ -59,16 +61,15 @@ pep_resource_open_pre(*OUT){
   *mv=substr(attr(*dpath, *svr), 1, 4);
   #Checking for DMF availability, logging if status is staged to disk.
   if ((*mv like "REG") || (*mv like "DUL")){
-   writeLine("serverLog","$userNameClient:$clientAddr copied *dpath (*mv) from the Archive.");
+  writeLine("serverLog","$userNameClient:$clientAddr copied *ipath (*mv) from the Archive.");
   }#if
   #If DMF status is not staged, we display the current status and error out, preventing data access.
   else{
-   cut;
-   msiExit("-1","Data requested is still on tape. Please use iarchive to stage to disk.");
-  }#else
+   #fail(-1);
+   failmsg(-1,"*ipath is still on tape with status: (*mv). Please use iarchive to stage to disk.");
+  } #else
  }#if
 }#PEP
-
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #Our iarchive rule. This is used to stage data from tape to disk.
@@ -80,17 +81,13 @@ iarch(){
  *svr="your.resource.FQDN";
  #The SURFsara Archive Resource Name mapped over the NFS link
  *resc="Archive";
- #This runs our target from user input to trim any trailing "/" and verify absolute paths
- #Errors out, stating that absolute paths must be used.
- if(*tar not like '/*'){
-  cut;
-  msiExit("-1","*tar is not an absolute path. Please retry with absolute path.");
- }#if
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
   *tar = trimr(*tar,'/');
  }#if
 
+ *inp=int("*inp");
+ *msg="Run command with -s to stage data to disk";
  #Becuase iRODS does a lot of handling based on collection or data-object type:
  msiGetObjType(*tar, *tarCD);
  #For individual data objects
@@ -99,9 +96,12 @@ iarch(){
   #Gives us the data_path location of our object. Also requires it to be on the Archive
   foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc' AND COLL_NAME like '*coll' AND DATA_NAME like '*obj' ){
    #runs the DMGET Staging and iget function
-   dmg(*row.DATA_PATH, *svr);
+   if(*inp==1){
+    dmg(*row.DATA_PATH, *svr);
+    *msg="Queued data to be staged to disk";
+   }
    *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*tar is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
+   writeLine("stdout","*tar is currently in state: *dmfs. *msg. Only REG or DUL may be accessed.");
   }#foreach
  }#if
 
@@ -110,9 +110,12 @@ iarch(){
   #Pulls all data paths for items that are on the Archive resource and within a target collection, including sub-collections.
   foreach(*row in SELECT DATA_PATH, COLL_NAME, DATA_NAME where RESC_NAME like '*resc' AND COLL_NAME like '*tar%'){
    *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
-   dmg(*row.DATA_PATH, *svr);
+   if(*inp==1){
+    dmg(*row.DATA_PATH, *svr);
+    *msg="Queued data to be staged to disk";
+   }#if
    *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*ipath is currently in state: *dmfs. Queued for staging to disk. Only REG or DUL may be accessed.");
+   writeLine("stdout","*ipath is currently in state: *dmfs. *msg. Only REG or DUL may be accessed.");
   }#foreach
  }#if
 
