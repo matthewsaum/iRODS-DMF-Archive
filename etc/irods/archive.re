@@ -78,7 +78,7 @@ iarch(){
  #*tar must be defined upon input
  #REQUIRED DEFINITIONS:
  #The Archive Resource Server
- *svr="syour.resource.FQDN";
+ *svr="your.resource.FQDN";
  #The SURFsara Archive Resource Name mapped over the NFS link
  *resc="Archive";
  #Removes a trailing "/" from collections if entered.
