@@ -1,1 +1,70 @@
-irule iarch "*tar=$1"  "ruleExecOut"
+#Instantly clear the command if a third argument is entered.
+if [ "$3" != "" ]
+then
+ echo `clear`
+ echo "The iarchive command only uses two options:"
+ echo "   The target path"
+ echo "   -s to stage data"
+ echo "Example: iarchive -s /zone/home/user/file.dat"
+ echo "Please use -h for more information"
+ exit
+fi
+
+
+#The help page
+if [[ "$1" = "-h" || "$2" = "-h" || "$1" = "" ]]
+then
+cat << EOF
+
+Usage: iarchive [-s|-h] <path>
+Example: iarchive -s /zone/home/user/file.dat
+Example: iarchive file.dat
+
+The iarchive command helps stage data from tape, making it accessible.
+On its own, it will give you the status of the target. Additional options are:
+        -s      Stage Data at target path from tape to disk
+        -h      This help screen
+
+DMF Status Definitions
+        (OFL)   Data is stored on tape only
+        (DUL)   Data is stored on tape and on disk
+        (REG)   Data is stored on disk only
+        (MIG)   Data is stored on disk, being written to tape
+        (UNM)   Data is stored on tape, being written to disk
+        (NMG)   Data is not migrateable between disk and tape
+        (PAR)   Data is in a partial state
+        (INV)   Data state is invalid or undetectable
+
+If you experience (INV) please contact your iRODS administrator.
+Report bugs to: https://github.com/Msaum87/iRODS-DMF-Archive
+EOF
+
+exit
+fi
+
+#Pulls the iRODS Target from $1 or $2, depending which it is.
+#allows users to run the command "out of order" with the -s flag
+if [[ "$1" != "-"* ]]
+then
+ ipath=$1
+elif [[ "$2" != "-"* ]]
+then
+ ipath=$2
+else
+ echo "Error. Please see the help menu and try iarchive again."
+fi
+
+#Let's users use relative pathing to specify a target
+if [[ $ipath != "/"* ]]
+then
+ ipath=`ipwd`"/$ipath"
+fi
+
+#This is to handle the -s option to stage data
+if [[ "$1" = "-s" || "$2" = "-s" ]]
+then
+ irule iarch "*tar=$ipath%*inp=1" "ruleExecOut"
+
+else
+ irule iarch "*tar=$ipath%*inp=0" "ruleExecOut"
+fi
