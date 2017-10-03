@@ -58,7 +58,7 @@ fi
 
 if [[ $ipath = "./"* ]]
 then
- ipath=`ipwd`"/${ipath:2}"
+ ipath=`ipwd`"${ipath:1}"
 
 elif [[ $ipath != "/"* ]]
 then
