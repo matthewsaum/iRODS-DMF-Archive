@@ -20,12 +20,12 @@
 #1.1- 26Sept2017-Now includes a % based feedback of staging and some code scrubbing to clean up functions.
 #1.2- 29Sept2017-Bug fix in PEP enforcement on what "open" means in iRODS, display better output in iGet interrupt
 #1.3- 02Oct2017- Included user input for options.
+#1.4- 03Oct2017- Much cleaner feedback displays. Prevented sending redundant DMGET requests. (if already staging, etc...)
+#----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
 #Possibly force .tar-ball of data before placed on archive resource?
-#User Prompt for DMF status only- to check status of data between disk and tape?
-
 
 
 
@@ -57,16 +57,16 @@ pep_resource_open_pre(*OUT){
   #Clean copy of the physical path and logical path
   *dpath=$KVPairs.physical_path;
   *ipath=$KVPairs.logical_path;
-  #fresh update of the DMF status meta data value. Runs the attr function, gives us the status from teh return string.
-  *mv=substr(attr(*dpath, *svr), 1, 4);
+  #fresh update of the DMF status meta data value. Runs the dmattr function, gives us the status from thh return string.
+  *mv=substr(dmattr(*dpath, *svr), 1, 4);
   #Checking for DMF availability, logging if status is staged to disk.
-  if ((*mv like "REG") || (*mv like "DUL")){
+  if ((*mv like "REG") || (*mv like "DUL") || (*mv like "MIG")){
   writeLine("serverLog","$userNameClient:$clientAddr copied *ipath (*mv) from the Archive.");
   }#if
   #If DMF status is not staged, we display the current status and error out, preventing data access.
   else{
    #fail(-1);
-   failmsg(-1,"*ipath is still on tape with status: (*mv). Please use iarchive to stage to disk.");
+   failmsg(-1,"*ipath is still on tape with status: (*mv) staged. Please use iarchive to stage to disk.");
   } #else
  }#if
 }#PEP
@@ -85,38 +85,42 @@ iarch(){
  if(*tar like '*/'){
   *tar = trimr(*tar,'/');
  }#if
-
+ #Puts our input variable to an intiger for easier handling.
  *inp=int("*inp");
- *msg="Run command with -s to stage data to disk";
  #Becuase iRODS does a lot of handling based on collection or data-object type:
  msiGetObjType(*tar, *tarCD);
  #For individual data objects
  if (*tarCD like '-d'){
   msiSplitPath(*tar, *coll, *obj);
+  writeLine("stdout","\n\nUse the iarchive command with the \"-s\" option to stage data.\nUse the iarchive command with the \"-h\" for DMF STATE defintions\n\nDMF STATE 	% STAGED        OBJECT NAME\n--------------------------------------------");
   #Gives us the data_path location of our object. Also requires it to be on the Archive
   foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc' AND COLL_NAME like '*coll' AND DATA_NAME like '*obj' ){
-   #runs the DMGET Staging and iget function
-   if(*inp==1){
-    dmg(*row.DATA_PATH, *svr);
-    *msg="Queued data to be staged to disk";
-   }
-   *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*tar is currently in state: *dmfs. *msg. Only REG or DUL may be accessed.");
+   #runs the dmattr funciton to pull DMF status and % loaded (as well as update the BFID if relevant)
+   *dmfs=dmattr(*row.DATA_PATH, *svr);
+   #runs the dmget function, if the input variable is 1 (so -s was used in the alias) AND only sends a dmget if the current state is not REG, DUL, or UNG
+   if(*inp==1 && (substr(*dmfs,1,4) not like "DUL" && substr(*dmfs,1,4) not like  "REG" && substr(*dmfs,1,4) not like "UNM" && substr(*dmfs,1,4) not like "MIG")){
+    dmget(*row.DATA_PATH, *svr);
+	*dmfs="(UNM)"++triml(*dmfs,")");
+   }#if
+   writeLine("stdout","*dmfs            *tar");
   }#foreach
+  writeLine("stdout","\nWARNING!!! % STAGED may not be 100% exactly, due to bytes used vs block size storage.");
  }#if
 
  #recursively stages a collection
  if (*tarCD like '-c'){
+ writeLine("stdout","\n\nUse the iarchive command with the \"-s\" option to stage data.\nUse the iarchive command with the \"-h\" for DMF STATE defintions\n\nDMF STATE 	% STAGED        OBJECT NAME\n--------------------------------------------");
   #Pulls all data paths for items that are on the Archive resource and within a target collection, including sub-collections.
   foreach(*row in SELECT DATA_PATH, COLL_NAME, DATA_NAME where RESC_NAME like '*resc' AND COLL_NAME like '*tar%'){
    *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
-   if(*inp==1){
-    dmg(*row.DATA_PATH, *svr);
-    *msg="Queued data to be staged to disk";
+   *dmfs=dmattr(*row.DATA_PATH, *svr);
+   if(*inp==1 && (substr(*dmfs,1,4) not like "DUL" && substr(*dmfs,1,4) not like  "REG" && substr(*dmfs,1,4) not like "UNM" && substr(*dmfs,1,4) not like "MIG")){
+    dmget(*row.DATA_PATH, *svr);
+	*dmfs="(UNM)"++triml(*dmfs,")");
    }#if
-   *dmfs=attr(*row.DATA_PATH, *svr);
-   writeLine("stdout","*ipath is currently in state: *dmfs. *msg. Only REG or DUL may be accessed.");
+   writeLine("stdout","*dmfs            *ipath");
   }#foreach
+  writeLine("stdout","\nWARNING!!! % STAGED may not be 100% exactly, due to bytes used vs block size storage.");
  }#if
 
 }#iarch
@@ -124,19 +128,19 @@ iarch(){
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #the DMGET function
-dmg(*data, *svr){
+dmget(*data, *svr){
  #This runs the DMGET command located in ~irods/iRODS/server/bin/cmd/dmget
  msiExecCmd("dmget", "*data", "*svr", "", "", *dmRes);
  msiGetStdoutInExecCmdOut(*dmRes,*dmStat);
  writeLine("serverLog","$userNameClient:$clientAddr- Archive dmget started on *svr:*data. Returned Status- *dmStat.");
-}#dmg
+}#dmget
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#this Attr rule below is meant to be running on delay to keep MetaData up to date.
+#this dmattr rule below is meant to be running on delay to keep MetaData up to date.
 #It also will be with any DMGET requests via the iarchive rules above.
 #That data is: The BFID of the data on tape, and the DMF Status
 #INPUT ORDER- *target object by DATA_PATH, *archive server name
-attr(*data, *svr){
+dmattr(*data, *svr){
  msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
  msiGetStdoutInExecCmdOut(*dmRes,*Out);
  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
@@ -151,6 +155,12 @@ attr(*data, *svr){
  *dmt=triml(triml(triml(*Out,'+'),'+'),'+');
  #trims to the available file size on disk
  *dma=trimr(triml(triml(*Out,'+'),'+'),'+');
+ #prevents division by zero errors, in case "someone" uploads an empty god damned file.
+ #This still gives a 100% Staged result, since TECHINCALLY 0/0 is 100%. Stupid empty files.
+ if(*dmt like "0"){
+  *dmt="1";
+  *dma="1";
+ }#if
  #Give us a % of completed migration from tape to disk
  *mig=double(*dma)/double(*dmt)*100;
  *dma=trimr("*mig", '.');
@@ -171,5 +181,5 @@ attr(*data, *svr){
   }#dmfstat if
  }#metadata
  #Our return sentence of status
- "(*dmfs) with *dma% staged from tape";
-}#attr
+ "(*dmfs)               *dma%";
+}#dmattr
