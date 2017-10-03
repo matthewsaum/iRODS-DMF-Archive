@@ -97,10 +97,10 @@ iarch(){
   foreach(*row in SELECT DATA_PATH where RESC_NAME like '*resc' AND COLL_NAME like '*coll' AND DATA_NAME like '*obj' ){
    #runs the dmattr funciton to pull DMF status and % loaded (as well as update the BFID if relevant)
    *dmfs=dmattr(*row.DATA_PATH, *svr);
-   #runs the dmget function, if the input variable is 1 (so -s was used in the alias) AND only sends a dmget if the current state is not REG, DUL, or UNG
-   if(*inp==1 && (substr(*dmfs,1,4) not like "DUL" && substr(*dmfs,1,4) not like  "REG" && substr(*dmfs,1,4) not like "UNM" && substr(*dmfs,1,4) not like "MIG")){
+   #Prevents redundant DMGET requests
+   if(*inp==1 && ((substr(*dmfs,1,4) not like "DUL" && substr(*dmfs,1,4) not like  "REG" && substr(*dmfs,1,4) not like "UNM" && substr(*dmfs,1,4) not like "MIG"))){
     dmget(*row.DATA_PATH, *svr);
-	*dmfs="(UNM)"++triml(*dmfs,")");
+    *dmfs="(UNM)"++triml(*dmfs,")");
    }#if
    writeLine("stdout","*dmfs            *tar");
   }#foreach
@@ -114,9 +114,10 @@ iarch(){
   foreach(*row in SELECT DATA_PATH, COLL_NAME, DATA_NAME where RESC_NAME like '*resc' AND COLL_NAME like '*tar%'){
    *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
    *dmfs=dmattr(*row.DATA_PATH, *svr);
-   if(*inp==1 && (substr(*dmfs,1,4) not like "DUL" && substr(*dmfs,1,4) not like  "REG" && substr(*dmfs,1,4) not like "UNM" && substr(*dmfs,1,4) not like "MIG")){
+   #Prevents redundant DMGET requests
+   if(*inp==1 && ((substr(*dmfs,1,4) not like "DUL" && substr(*dmfs,1,4) not like  "REG" && substr(*dmfs,1,4) not like "UNM" && substr(*dmfs,1,4) not like "MIG"))){
     dmget(*row.DATA_PATH, *svr);
-	*dmfs="(UNM)"++triml(*dmfs,")");
+    *dmfs="(UNM)"++triml(*dmfs,")");
    }#if
    writeLine("stdout","*dmfs            *ipath");
   }#foreach
