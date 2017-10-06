@@ -102,6 +102,8 @@ iarch(){
     dmget(*row.DATA_PATH, *svr);
     *dmfs="(UNM)"++triml(*dmfs,")");
    }#if
+   #THIS IS THE USER OUTPUT OF IARCHIVE STATUS
+   #It is best to make this white space "3 spaces, then 3 tabs" to line everythign up nicely
    writeLine("stdout","*dmfs            *tar");
   }#foreach
   writeLine("stdout","\nWARNING!!! % STAGED may not be 100% exactly, due to bytes used vs block size storage.");
@@ -119,7 +121,9 @@ iarch(){
     dmget(*row.DATA_PATH, *svr);
     *dmfs="(UNM)"++triml(*dmfs,")");
    }#if
-   writeLine("stdout","*dmfs            *ipath");
+   #Whitespace here should be 3 spaces, then 3 tabs, to keep everything in line with the headers.
+   #It just keeps it pretty.
+   writeLine("stdout","*dmfs          *ipath");
   }#foreach
   writeLine("stdout","\nWARNING!!! % STAGED may not be 100% exactly, due to bytes used vs block size storage.");
  }#if
