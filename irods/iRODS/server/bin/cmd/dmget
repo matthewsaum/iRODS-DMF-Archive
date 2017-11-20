@@ -1,4 +1,8 @@
 #!/bin/sh
+#Author Matthew Saum
+#Copyright 2017 SURFsara BV
+#Apache License 2.0
+
 #belongs in:
 #irods~/iRODS/server/bin/cmd/dmget
 #This is on our Archive Resource Server, called by the archive rules
