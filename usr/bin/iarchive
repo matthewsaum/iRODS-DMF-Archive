@@ -1,3 +1,7 @@
+#Author Matthew Saum
+#Copyright 2017 SURFsara BV
+#Apache License 2.0
+
 #Instantly clear the command if a third argument is entered.
 if [ "$3" != "" ]
 then
