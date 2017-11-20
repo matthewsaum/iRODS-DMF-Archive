@@ -1,4 +1,7 @@
-#SURFsara-Matthew Saum
+#Author Matthew Saum
+#Copyright 2017 SURFsara BV
+#Apache License 2.0
+
 #20 Sep 2017
 #DMF interaction for iRODS, when mounted via NFS.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
