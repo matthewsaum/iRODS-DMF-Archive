@@ -1,4 +1,8 @@
 #!/bin/sh
+#Author Matthew Saum
+#Copyright 2017 SURFsara BV
+#Apache License 2.0
+
 #echo "execCmdRule: "$execCmdRule
 # the -a updates the access time of the file with the current time. Important for DMF disk cache, as it releases data based on oldest-accessed
 # the -q queues the request. This allows us to use DMF efficiently by queuing several requsts at once
