@@ -72,12 +72,8 @@ pep_resource_open_pre(*OUT){
   writeLine("serverLog","$userNameClient:$clientAddr copied *ipath (*mv) from the Archive.");
   }#if
   #If DMF status is not staged, we display the current status and error out, preventing data access.
-  else{
+  else if ((*mv like "UNM") || (*mv like "OFL") || (*mv like "PAR")){
    #We have options here. We can either auto-stage the data, or provide an error and request the user manually stage data.
-   if(*auto==0){
-    failmsg(-1,"*ipath is still on tape with status: (*mv). If (OFL), please use iarchive to stage to disk.");
-   }
-   #These two lines are a failmsg stating that the data is being migrated, and auto-staging it from tape
    if(*auto==1){
     #prevents redundant queuing in DMF
     if(*mv not like "UNM"){
@@ -85,9 +81,12 @@ pep_resource_open_pre(*OUT){
     } #if
     failmsg(-1,"*ipath is still on tape, but queued to be staged. Current data staged: *stg." );
    } #if
-   else {
-    failmsg(-1,"Archive Policy is not properly configured. Please check the archive.re file, or respectively located ruleset.");
-   }#else
+   else{
+    failmsg(-1,"*ipath is still on tape with status: (*mv). If (OFL), please use iarchive to stage to disk.");
+   } #else
+  }#else if
+  else {
+   failmsg(-1,"*ipath is either not on the tape archive, or something broke internal to the system.");
   }#else
  }#if
 }#PEP
