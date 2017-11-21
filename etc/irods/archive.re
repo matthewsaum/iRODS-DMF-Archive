@@ -14,10 +14,11 @@
 #see the dmget and dmattr man pages for details.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #REQUIRED VARIABLES TO BE DEFINED:
-#*svr and *resc, found in "acpostProcForPut", "pep_resource_open_pre", "delay", and "iarch"
-#These are the same defintions, needed by separate functions.
-#*svr="The name of the iRODS resource server connected to the archive"
-#*resc="the name of the archive resource"
+#inside three functions (acPostProcForPut, pep_open_pre, and iarch), are variables
+#that needs to be defined for functionality. They should match across the three, where applicable
+#*auto=[1|0]  #1 means that irods will automatically stage data if asked to get data that is on tape
+#*svr=FQ.D.N   #The FQDN of your iRODS server connected to the archive resource
+#*resc=Archive #The name of your archive resource in iRODS
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #1.0- 20Sept2017-First fully functional version
 #1.1- 26Sept2017-Now includes a % based feedback of staging and some code scrubbing to clean up functions.
@@ -25,6 +26,7 @@
 #1.3- 02Oct2017- Included user input for options.
 #1.4- 03Oct2017- Much cleaner feedback displays. Prevented sending redundant DMGET requests. (if already staging, etc...)
 #----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
+#1.5- 21Nov2017- Now included- an auto stage feature on iget for tape-stored data. *auto var in the PEP.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
@@ -54,6 +56,7 @@ acPostProcForPut {
 #per each file, until interrupted.
 pep_resource_open_pre(*OUT){
  #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
+ *auto=1;
  *svr="your.resource.FQDN";
  *resc="Archive";
  if($KVPairs.resc_hier like *resc && $connectOption != "iput"){
@@ -68,9 +71,19 @@ pep_resource_open_pre(*OUT){
   }#if
   #If DMF status is not staged, we display the current status and error out, preventing data access.
   else{
-   #fail(-1);
-   failmsg(-1,"*ipath is still on tape with status: (*mv) staged. Please use iarchive to stage to disk.");
-  } #else
+   #We have options here. We can either auto-stage the data, or provide an error and request the user manually stage data.
+   if(*auto==0){
+    failmsg(-1,"*ipath is still on tape with status: (*mv). If (OFL), please use iarchive to stage to disk.");
+   }
+   #These two lines are a failmsg stating that the data is being migrated, and auto-staging it from tape
+   if(*auto==1){
+    dmget(*dpath,*svr);
+    failmsg(-1,"*ipath is still on tape, but queued to be staged. Current data staged: *stg." );
+   } #if
+   else {
+    failmsg(-1,"Archive Policy is not properly configured. Please check the archive.re file, or respectively located ruleset.");
+   }#else
+  }#else
  }#if
 }#PEP
 
