@@ -64,7 +64,9 @@ pep_resource_open_pre(*OUT){
   *dpath=$KVPairs.physical_path;
   *ipath=$KVPairs.logical_path;
   #fresh update of the DMF status meta data value. Runs the dmattr function, gives us the status from thh return string.
-  *mv=substr(dmattr(*dpath, *svr), 1, 4);
+  *dma=dmattr(*dpath, *svr);
+  *mv=substr(*dma, 1, 4);
+  *stg=triml(*dma, "        ");
   #Checking for DMF availability, logging if status is staged to disk.
   if ((*mv like "REG") || (*mv like "DUL") || (*mv like "MIG")){
   writeLine("serverLog","$userNameClient:$clientAddr copied *ipath (*mv) from the Archive.");
