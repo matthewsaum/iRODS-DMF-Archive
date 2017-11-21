@@ -40,6 +40,8 @@
  Author- Matthew Saum (SURFsara)		
  		
  License Copyright 2017 SURFsara BV		
+ 
+ Non-code files (markdown and so) are protected by the Creative Commons CC-BY license.
  		
  Licensed under the Apache License, Version 2.0 (the “License”); you may not use this file except in compliance with the License. You may obtain a copy of the License at		
  		
