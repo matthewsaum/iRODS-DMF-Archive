@@ -77,7 +77,10 @@ pep_resource_open_pre(*OUT){
    }
    #These two lines are a failmsg stating that the data is being migrated, and auto-staging it from tape
    if(*auto==1){
-    dmget(*dpath,*svr);
+    #prevents redundant queuing in DMF
+    if(*mv not like "UNM"){
+     dmget(*dpath,*svr);
+    } #if
     failmsg(-1,"*ipath is still on tape, but queued to be staged. Current data staged: *stg." );
    } #if
    else {
