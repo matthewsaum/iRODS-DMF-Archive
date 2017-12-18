@@ -1,6 +1,6 @@
 # iRODS-DMF-Archive
  - This contains the command files, the rule set, and a command-ish alias to easily link iRODS to a DMF Tape Library.		 
- - This will be to keep the the user updated with what % of teh data has been staged (UMG) from tape to disk, prior to being accessible.
+ - This will be to keep the the user updated with what % of the data has been staged (UMG) from tape to disk, prior to being accessible.
  - This is for iRODS 4.1.10. I cannot say what will happen on 4.2.x.		
  - The DMF version we use is 6.7, via NFSv4. 		
  		
