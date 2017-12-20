@@ -48,40 +48,12 @@ acPostProcForPut {
 #but iRODS tries to access it, DMF is flooded by 1 request every 3 seconds,
 #per each file, until interrupted.
 pep_resource_open_pre(*OUT){
- #DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
- *auto=1;
- *svr="your.resource.FQDN";
- *resc="Archive";
- if($KVPairs.resc_hier like *resc && $connectOption != "iput"){
-  #Clean copy of the physical path and logical path
-  *dpath=$KVPairs.physical_path;
-  *ipath=$KVPairs.logical_path;
-  #fresh update of the DMF status meta data value. Runs the dmattr function, gives us the status from thh return string.
-  *dma=dmattr(*dpath, *svr);
-  *mv=substr(*dma, 1, 4);
-  *stg=triml(*dma, "        ");
-  #Checking for DMF availability, logging if status is staged to disk.
-  if ((*mv like "REG") || (*mv like "DUL") || (*mv like "MIG")){
-  writeLine("serverLog","$userNameClient:$clientAddr copied *ipath (*mv) from the Archive.");
-  }#if
-  #If DMF status is not staged, we display the current status and error out, preventing data access.
-  else if ((*mv like "UNM") || (*mv like "OFL") || (*mv like "PAR")){
-   #We have options here. We can either auto-stage the data, or provide an error and request the user manually stage data.
-   if(*auto==1){
-    #prevents redundant queuing in DMF
-    if(*mv not like "UNM"){
-     dmget(*dpath,*svr);
-    } #if
-    failmsg(-1,"*ipath is still on tape, but queued to be staged. Current data staged: *stg." );
-   } #if
-   else{
-    failmsg(-1,"*ipath is still on tape with status: (*mv). If (OFL), please use iarchive to stage to disk.");
-   } #else
-  }#else if
-  else {
-   failmsg(-1,"*ipath is either not on the tape archive, or something broke internal to the system.");
-  }#else
- }#if
+#DEFINE THESE ACCORDING TO THE INSTRUCTIONS ABOVE
+ on($KVPairs.resc_hier like "Archive" && $connectOption != "iput"){
+  #dmpep: First argument is to auto-stage data on request. 0=do not stage, 1=stage.
+  #dmpep: second argument is the FQDN of your archive-connected resource server.
+  dmpep(0, "sara-irods1.grid.surfsara.nl");
+ }#on
 }#PEP
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -153,6 +125,38 @@ dmeta{
  msiSetKeyValuePairsToObj(*Key2,$objPath,"-d");
  writeLine("serverLog","New Archived data, applying required meta-data");
 }#dmeta
+
+#DMF Archive PEP to prevent access to data that is not staged from tape to disk
+dmpep(*auto, *svr){
+ #Clean copy of the physical path and logical path
+ *ipath=$KVPairs.logical_path;
+ #fresh update of the DMF status meta data value. Runs the dmattr function, gives us the status from thh return string.
+ *dma=dmattr($KVPairs.physical_path, *svr);
+ *mv=substr(*dma, 1, 4);
+ *stg=triml(*dma, "        ");
+ #Checking for DMF availability, logging if status is staged to disk.
+ if ((*mv like "REG") || (*mv like "DUL") || (*mv like "MIG")){
+  writeLine("serverLog","$userNameClient:$clientAddr accessed *ipath (*mv) from the Archive.");
+ }#if
+ #If DMF status is not staged, we display the current status and error out, preventing data access.
+ else if ((*mv like "UNM") || (*mv like "OFL") || (*mv like "PAR")){
+  #We have options here. We can either auto-stage the data, or provide an error and request the user manually stage data.
+  if(*auto==1){
+   #prevents redundant queuing in DMF
+   if(*mv not like "UNM"){
+    dmget($KVPairs.physical_path,*svr);
+   } #if
+   failmsg(-1,"*ipath is still on tape, but queued to be staged. Current data staged: *stg." );
+  } #if
+  else{
+   failmsg(-1,"*ipath is still on tape with status: (*mv). If (OFL), please use iarchive to stage to disk.");
+  } #else
+ }#else if
+ else {
+  failmsg(-1,"*ipath is either not on the tape archive, or something broke internal to the system.");
+ }#else
+}#dmpep 
+
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #the DMGET function
