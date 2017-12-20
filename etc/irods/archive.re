@@ -39,14 +39,7 @@
 # the other is required by operations here. It is our DMF status.
 #This is to prevent iRODS from trying to read data on tape without being staged to disk.
 acPostProcForPut {
- *resc="Archive";
- if($rescName like *resc){
-  msiAddKeyVal(*Key1,"SURF-BFID","NewData");
-  msiSetKeyValuePairsToObj(*Key1,$objPath,"-d");
-  msiAddKeyVal(*Key2,"SURF-DMF","NewData");
-  msiSetKeyValuePairsToObj(*Key2,$objPath,"-d");
-  writeLine("serverLog","New Archived data, applying required meta-data");
- }#if
+ on($rescName like "Archive"){ dmeta(); msiGoodFailure;}
 }#acpostprocforput
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -151,6 +144,16 @@ iarch(){
 }#iarch
 
 
+#DMF Meta-data application
+#For data as it is moved into the DMF Archive
+dmeta{
+ msiAddKeyVal(*Key1,"SURF-BFID","NewData");
+ msiSetKeyValuePairsToObj(*Key1,$objPath,"-d");
+ msiAddKeyVal(*Key2,"SURF-DMF","NewData");
+ msiSetKeyValuePairsToObj(*Key2,$objPath,"-d");
+ writeLine("serverLog","New Archived data, applying required meta-data");
+}#dmeta
+
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #the DMGET function
 dmget(*data, *svr){
@@ -180,7 +183,7 @@ dmattr(*data, *svr){
  *dmt=triml(triml(triml(*Out,'+'),'+'),'+');
  #trims to the available file size on disk
  *dma=trimr(triml(triml(*Out,'+'),'+'),'+');
- #prevents division by zero errors, in case "someone" uploads an empty god damned file.
+ #Prevents division by zero errors, in case "someone" uploads an empty file.
  #This still gives a 100% Staged result, since TECHINCALLY 0/0 is 100%. Stupid empty files.
  if(*dmt like "0"){
   *dmt="1";
