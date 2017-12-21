@@ -77,18 +77,20 @@ pep_resource_open_pre(*OUT){
    || *dmfs like "PAR"
   ){            #Errors out if data not staged
     #-=-=-=-=-=-=-=-=-
-	#These two lines are for auto-staging
+    #These two lines are for auto-staging
 	
     #dmget($KVPairs.physical_path,*svr, *dmfs);
-    #msiExit("-1",$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
+    #msiOprDisallowed;
 	
 	#-=-=-=-=-=-=-=-=-
 	#This line is for not auto-staging data.
-    msiExit("-1",$KVPairs.logical_path++" is still on tape with status: (*dmfs). If (OFL), please use iarchive to stage to disk.");
-	
+      writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+      msiOprDisallowed;
+
   }#else if
   else {
-   msiExit("-1",$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
+      writeLine("serverLog","Something went terribly wrong with the Archive policy. Please contact the admins.");
+      msiOprDisallowed;
   }#else
  }#on
  #msiGoodFailure;       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
