@@ -39,12 +39,18 @@
 #this creates two meta-data tags, one for the DMF BFID, which is good record keeping.
 # the other is required by operations here. It is our DMF status.
 #This is to prevent iRODS from trying to read data on tape without being staged to disk.
-acPostProcForPut {
- on($rescName like "Archive"){ 
-  dmeta(); 
-  msiGoodFailure;
- }
-}#acpostprocforput
+pep_resource_create_post(*OUT){
+ on($KVPairs.resc_hier like "Archive"){
+  delay("<PLUSET>10</PLUSET>"){                        #delay rule because cannot add until AFTER object creation
+   msiAddKeyVal(*Key1,"SURF-BFID","NewData");
+   msiSetKeyValuePairsToObj(*Key1,$KVPairs.logical_path,"-d");
+   msiAddKeyVal(*Key2,"SURF-DMF","NewData");
+   msiSetKeyValuePairsToObj(*Key2,$KVPairs.logical_path,"-d");
+   writeLine("serverLog","New Archived data, applying required meta-data");
+  }
+ }#on
+ #msiGoodFailure;                       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
+}
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #This is our Policy Enforcement Point for preventing iRODS from reading data
@@ -99,17 +105,6 @@ iarch(){
  }#if
  writeLine("stdout","\nWARNING!!! % STAGED may not be 100% exactly, due to bytes used vs block size storage.");
 }#iarch
-
-
-#DMF Meta-data application
-#For data as it is moved into the DMF Archive
-dmeta{
- msiAddKeyVal(*Key1,"SURF-BFID","NewData");
- msiSetKeyValuePairsToObj(*Key1,$objPath,"-d");
- msiAddKeyVal(*Key2,"SURF-DMF","NewData");
- msiSetKeyValuePairsToObj(*Key2,$objPath,"-d");
- writeLine("serverLog","New Archived data, applying required meta-data");
-}#dmeta
 
 #DMF Archive PEP to prevent access to data that is not staged from tape to disk
 #INPUT ORDER: auto-stage flag, resource server FQDN
