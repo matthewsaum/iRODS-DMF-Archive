@@ -1,5 +1,5 @@
 #Author Matthew Saum
-#Copyright 2017 SURFsara BV
+#Copyright 2017 SURFBV
 #Apache License 2.0
 
 #20 Sep 2017
@@ -56,11 +56,11 @@ pep_resource_create_post(*OUT){
 #but iRODS tries to access it, DMF is flooded by 1 request every 3 seconds,
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
- on(  																	
-     $KVPairs.resc_hier like "Archive" 
+ on(
+     $KVPairs.resc_hier like "Archive"
   && $connectOption != "iput"
  ){
-  *svr="your.resc.FQDN";
+  *svr="YOUR.FQDN.HERE";
   *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
   *dmfs=substr(*dma, 1, 4);
   *stg=triml(*dma, "        ");
@@ -78,19 +78,18 @@ pep_resource_open_pre(*OUT){
   ){            #Errors out if data not staged
     #-=-=-=-=-=-=-=-=-
     #These two lines are for auto-staging
-	
-    #dmget($KVPairs.physical_path,*svr, *dmfs);
-    #msiOprDisallowed;
-	
-	#-=-=-=-=-=-=-=-=-
-	#This line is for not auto-staging data.
-      writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-      msiOprDisallowed;
 
+    #dmget($KVPairs.physical_path,*svr, *dmfs);
+    #failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
+
+    #-=-=-=-=-=-=-=-=-
+    #This line is for not auto-staging data.
+      writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+      writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+      msiOprDisallowed;
   }#else if
   else {
-      writeLine("serverLog","Something went terribly wrong with the Archive policy. Please contact the admins.");
-      msiOprDisallowed;
+   failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
   }#else
  }#on
  #msiGoodFailure;       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
@@ -101,28 +100,28 @@ pep_resource_open_pre(*OUT){
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*inp=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
- *svr="your.resc.FQDN";     #Resource Server FQDN
+ *svr="-YOUR.FQDN.HERE";     #Resource Server FQDN
  *resc="Archive";                                   #The name of the resource
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
   *tar = trimr(*tar,'/');
  }#if
  *inp=int("*inp"); #Input flag conversion to int. Used to determin to stage data or only provide output.
- msiGetObjType(*tar, *tarCD);                          										
- writeLine("stdout","\n\nUse the iarchive command with the \"-s\" option to stage data.");   
- writeLine("stdout","Use the iarchive command with the \"-h\" for DMF STATE defintions");   
- writeLine("stdout","DMF STATE  % STAGED        OBJECT NAME\n--------------------------------------------");  
+ msiGetObjType(*tar, *tarCD);
+ writeLine("stdout","\n\nUse the iarchive command with the \"-s\" option to stage data.");
+ writeLine("stdout","Use the iarchive command with the \"-h\" for DMF STATE defintions");
+ writeLine("stdout","DMF STATE  % STAGED        OBJECT NAME\n--------------------------------------------");
  if (*tarCD like '-d'){                                         #Manual staging individual data object
   msiSplitPath(*tar, *coll, *obj);
-  foreach(           
-   *row in 
-   SELECT 
-    DATA_PATH 
-   where 
-        RESC_NAME like '*resc' 
-	AND COLL_NAME like '*coll' 
-	AND DATA_NAME like '*obj' 
-  ){   
+  foreach(
+   *row in
+   SELECT
+    DATA_PATH
+   where
+        RESC_NAME like '*resc'
+        AND COLL_NAME like '*coll'
+        AND DATA_NAME like '*obj'
+  ){
    *dmfs=dmattr(*row.DATA_PATH, *svr);                                  #pulls DMF attributes into meta-data
    if(  *inp==1 ){
     dmget(*row.DATA_PATH, *svr, substr(*dmfs,1,4));
@@ -133,15 +132,15 @@ iarch(){
  }#if
  if (*tarCD like '-c'){                                 #Recursively stage a collection
   foreach(
-   *row in 
-   SELECT 
-    DATA_PATH, 
-    COLL_NAME, 
-    DATA_NAME 
-   where 
-        RESC_NAME like '*resc' 
+   *row in
+   SELECT
+    DATA_PATH,
+    COLL_NAME,
+    DATA_NAME
+   where
+        RESC_NAME like '*resc'
     AND COLL_NAME like '*tar%'
-  ){ 
+  ){
    *dmfs=dmattr(*row.DATA_PATH, *svr);
    if(*inp==1){                                          #input to only check status or actually stage
     dmget(*row.DATA_PATH, *svr, substr(*dmfs,1,4));
@@ -164,7 +163,7 @@ dmget(*data, *svr, *dmfs){
   && *dmfs not like "UNM"
   && *dmfs not like "MIG"
  ){
-  msiExecCmd("dmget", "*data", "*svr", "", "", *dmRes);  
+  msiExecCmd("dmget", "*data", "*svr", "", "", *dmRes);
   msiGetStdoutInExecCmdOut(*dmRes,*dmStat);
   writeLine("serverLog","$userNameClient:$clientAddr- Archive dmget started on *svr:*data. Returned Status- *dmStat.");
  }#if
@@ -192,14 +191,14 @@ dmattr(*data, *svr){
  *mig=double(*dma)/double(*dmt)*100;                     #Give us a % of completed migration from tape to disk
  *dma=trimr("*mig", '.');
  foreach(
-  *boat in 
-  SELECT 
-   META_DATA_ATTR_NAME, 
-   META_DATA_ATTR_VALUE, 
-   COLL_NAME, DATA_NAME 
-  where 
+  *boat in
+  SELECT
+   META_DATA_ATTR_NAME,
+   META_DATA_ATTR_VALUE,
+   COLL_NAME, DATA_NAME
+  where
    DATA_PATH like *data
-  ){                           
+  ){
   *ipath=*boat.COLL_NAME++"/"++*boat.DATA_NAME;
   *mn=*boat.META_DATA_ATTR_NAME;
   *mv=*boat.META_DATA_ATTR_VALUE;
@@ -214,3 +213,5 @@ dmattr(*data, *svr){
  }#metadata
  "(*dmfs)               *dma%";                                         #Our return sentence of status
 }#dmattr
+
+
