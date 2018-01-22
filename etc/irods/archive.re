@@ -46,7 +46,7 @@ pep_resource_create_post(*OUT){
    msiSetKeyValuePairsToObj(*Key2,$KVPairs.logical_path,"-d");
    writeLine("serverLog","New Archived data"++$KVPairs.logical_path++". Applying required meta-data");
   }
- }#on
+ } #on
  #msiGoodFailure;         #Uncomment to prevent later rule conflicts if PEP in use elsewhere
 }
 
@@ -56,51 +56,54 @@ pep_resource_create_post(*OUT){
 #but iRODS tries to access it, DMF is flooded by 1 request every 3 seconds,
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
- on(
-     $KVPairs.resc_hier like "Archive"
-  && $connectOption != "iput"
- ){
-  *svr="YOUR.FQDN.HERE";
-  *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
-  *dmfs=substr(*dma, 1, 4);
-  *stg=triml(*dma, "        ");
-  if (
-      *dmfs like "REG"
-   || *dmfs like "DUL"
-   || *dmfs like "MIG"
-  ){                            #Log access if data is online
-   writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
-  }#if
-  else if (
-      *dmfs like "UNM"
-   || *dmfs like "OFL"
-   || *dmfs like "PAR"
-  ){            #Errors out if data not staged
-    #-=-=-=-=-=-=-=-=-
-    #These two lines are for auto-staging
+ on($KVPairs.resc_hier like "Archive"){
+  if($connectOption == "iput"){
+   writeLine("serverLog","$userNameClient:$clientAddr attempted to create "++$KVPairs.logical_path++" on the DMF Archive directly.");
+  } #if
+  else if($connectOption != "iput"){
+   *svr="YOUR.FQDN";
+   *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
+   *dmfs=substr(*dma, 1, 4);
+   *stg=triml(*dma, "        ");
+   if (
+       *dmfs like "REG"
+    || *dmfs like "DUL"
+    || *dmfs like "MIG"
+   ){                            #Log access if data is online
+    writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
+   }#if
+   else if (
+       *dmfs like "UNM"
+    || *dmfs like "OFL"
+    || *dmfs like "PAR"
+   ){            #Errors out if data not staged
+     #-=-=-=-=-=-=-=-=-
+     #These two lines are for auto-staging
 
-    #dmget($KVPairs.physical_path,*svr, *dmfs);
-    #failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
+     dmget($KVPairs.physical_path,*svr, *dmfs);
+     failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
 
-    #-=-=-=-=-=-=-=-=-
-    #This line is for not auto-staging data.
-      writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-      writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-      msiOprDisallowed;
-  }#else if
-  else {
-   failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
-  }#else
- }#on
+     #-=-=-=-=-=-=-=-=-
+     #This line is for not auto-staging data.
+      # writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+      # writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+      # msiOprDisallowed;
+   } #else if
+   else {
+    failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
+   }#else
+  } #if
+ } #on
  #msiGoodFailure;       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
-}#PEP
+} #PEP
+
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #Our iarchive rule. This is used to stage data from tape to disk manually.
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*inp=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
- *svr="-YOUR.FQDN.HERE";     #Resource Server FQDN
+ *svr="YOUR.FQDN";     #Resource Server FQDN
  *resc="Archive";                                   #The name of the resource
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
@@ -213,5 +216,3 @@ dmattr(*data, *svr){
  }#metadata
  "(*dmfs)               *dma%";                                         #Our return sentence of status
 }#dmattr
-
-
