@@ -27,7 +27,7 @@
 #1.4- 03Oct2017- Much cleaner feedback displays. Prevented sending redundant DMGET requests. (if already staging, etc...)
 #----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
 #1.5- 21Nov2017- Now included- an auto stage feature on iget for tape-stored data. *auto var in the PEP.
-#2.0- 21Dec2017- Re-structured entire code. Far better function calling, less redundant lines, rule-conflict handling
+#2.0- 19Jan2017- Re-structured entire code. Far better function calling, less redundant lines, rule-conflict handling
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
