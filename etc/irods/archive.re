@@ -37,18 +37,7 @@
 #this creates two meta-data tags, one for the DMF BFID, which is good record keeping.
 # the other is required by operations here. It is our DMF status.
 #This is to prevent iRODS from trying to read data on tape without being staged to disk.
-pep_resource_create_post(*OUT){
- on($KVPairs.resc_hier like "Archive"){
-  delay("<PLUSET>10</PLUSET>"){                        #delay rule because cannot add until AFTER object creation
-   msiAddKeyVal(*Key1,"SURF-BFID","NewData");
-   msiSetKeyValuePairsToObj(*Key1,$KVPairs.logical_path,"-d");
-   msiAddKeyVal(*Key2,"SURF-DMF","NewData");
-   msiSetKeyValuePairsToObj(*Key2,$KVPairs.logical_path,"-d");
-   writeLine("serverLog","New Archived data"++$KVPairs.logical_path++". Applying required meta-data");
-  }
- } #on
- #msiGoodFailure;         #Uncomment to prevent later rule conflicts if PEP in use elsewhere
-}
+
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #This is our Policy Enforcement Point for preventing iRODS from reading data
@@ -57,49 +46,42 @@ pep_resource_create_post(*OUT){
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
  on($KVPairs.resc_hier like "Archive"){
-  if($connectOption == "iput"){
-   writeLine("serverLog","$userNameClient:$clientAddr attempted to create "++$KVPairs.logical_path++" on the DMF Archive directly.");
-  } #if
-  else if($connectOption != "iput"){
-   *svr="SERVER.FQDN.HERE";
-   *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
-   *dmfs=substr(*dma, 1, 4);
-   *stg=triml(*dma, "        ");
-   if (
-       *dmfs like "REG"
-    || *dmfs like "DUL"
-    || *dmfs like "MIG"
-   ){                            #Log access if data is online
-    writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
-   }#if
-   else if (
-       *dmfs like "UNM"
-    || *dmfs like "OFL"
-    || *dmfs like "PAR"
-   ){            #Errors out if data not staged
-     cut;
-     #-=-=-=-=-=-=-=-=-
-     #These two lines are for auto-staging
-
-     dmget($KVPairs.physical_path,*svr, *dmfs);
-     failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
-
-     #-=-=-=-=-=-=-=-=-
-     #This block is for not auto-staging data.
-
-      # writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-      # writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-      # msiOprDisallowed;
-
-   } #else if
-   else {
+  *svr="sara-irods1.grid.surfsara.nl";
+  *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
+  *dmfs=substr(*dma, 1, 4);
+  *stg=triml(*dma, "        ");
+  if (
+      *dmfs like "REG"
+   || *dmfs like "DUL"
+   || *dmfs like "MIG"
+   || *dmfs like "NEW"
+  ){                            #Log access if data is online
+   writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
+   cut;
+  }#if
+  else if (
+      *dmfs like "UNM"
+   || *dmfs like "OFL"
+   || *dmfs like "PAR"
+  ){            #Errors out if data not staged
     cut;
-    failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
-   }#else
-  } #if
+    #-=-=-=-=-=-=-=-=-
+    #These two lines are for auto-staging
+     dmget($KVPairs.physical_path,*svr, *dmfs);
+    failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
+     #-=-=-=-=-=-=-=-=-
+    #This block is for not auto-staging data.
+      # writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+     # writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+     # msiOprDisallowed;
+   } #else if
+  else {
+   cut;
+   failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
+  }#else
  } #on
  on($KVPairs.resc_hier not like "Archive"){
-  #do nothing
+  #does nothing if not on the Archive
  } #on
  #msiGoodFailure;       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
 } #PEP
@@ -110,7 +92,7 @@ pep_resource_open_pre(*OUT){
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*inp=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
- *svr="SERVER.FQDN.HERE";     #Resource Server FQDN
+ *svr="sara-irods1.grid.surfsara.nl";     #Resource Server FQDN
  *resc="Archive";                                   #The name of the resource
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
@@ -188,38 +170,44 @@ dmattr(*data, *svr){
  msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
  msiGetStdoutInExecCmdOut(*dmRes,*Out);
  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
- # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
- *Out=trimr(*Out,'\n');                                 #Trims the newline
- *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');           #DMF BFID, trims from right to left, to and including the + symbol
- *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');           #DMF STATUS, trims up the DMF status only
- *dmt=triml(triml(triml(*Out,'+'),'+'),'+');            #trims to the total file size in DMF
- *dma=trimr(triml(triml(*Out,'+'),'+'),'+');            #trims to the available file size on disk
- if(*dmt like "0"){                                     #Prevents division by zero in case of empty files.
-  *dmt="1";
-  *dma="1";
- }#if
- *mig=double(*dma)/double(*dmt)*100;                     #Give us a % of completed migration from tape to disk
- *dma=trimr("*mig", '.');
- foreach(
-  *boat in
-  SELECT
-   META_DATA_ATTR_NAME,
-   META_DATA_ATTR_VALUE,
-   COLL_NAME, DATA_NAME
-  where
-   DATA_PATH like *data
-  ){
-  *ipath=*boat.COLL_NAME++"/"++*boat.DATA_NAME;
-  *mn=*boat.META_DATA_ATTR_NAME;
-  *mv=*boat.META_DATA_ATTR_VALUE;
-  if(*mn like 'SURF-BFID' && str(*mv) not like str(*bfid)){             #Checking that BFID matches, correcting if not
-   msiAddKeyVal(*Keyval,*mn,*bfid);
-   msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
-  }#bfid if
-  if(*mn like 'SURF-DMF' && str(*mv) not like str(*dmfs)){              #Checking that DMF Status matches, correcting if not
-   msiAddKeyVal(*Keyval,*mn,*dmfs);
-   msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
-  }#dmfstat if
- }#metadata
- "(*dmfs)               *dma%";                                         #Our return sentence of status
+ if(*Out like "sgi_dmf*"){
+  # If DMF returns an error because the data does not exist yet (it is being created), we return a new status.
+  "(NEW)                100%";                                         #Our return sentence of status
+ } #if
+ else{
+  # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
+  *Out=trimr(*Out,'\n');                                 #Trims the newline
+  *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');           #DMF BFID, trims from right to left, to and including the + symbol
+  *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');           #DMF STATUS, trims up the DMF status only
+  *dmt=triml(triml(triml(*Out,'+'),'+'),'+');            #trims to the total file size in DMF
+  *dma=trimr(triml(triml(*Out,'+'),'+'),'+');            #trims to the available file size on disk
+  if(*dmt like "0"){                                     #Prevents division by zero in case of empty files.
+   *dmt="1";
+   *dma="1";
+  }#if
+  *mig=double(*dma)/double(*dmt)*100;                     #Give us a % of completed migration from tape to disk
+  *dma=trimr("*mig", '.');
+  foreach(
+   *boat in
+   SELECT
+    META_DATA_ATTR_NAME,
+    META_DATA_ATTR_VALUE,
+    COLL_NAME, DATA_NAME
+   where
+    DATA_PATH like *data
+   ){
+   *ipath=*boat.COLL_NAME++"/"++*boat.DATA_NAME;
+   *mn=*boat.META_DATA_ATTR_NAME;
+   *mv=*boat.META_DATA_ATTR_VALUE;
+   if(*mn like 'SURF-BFID' && str(*mv) not like str(*bfid)){             #Checking that BFID matches, correcting if not
+    msiAddKeyVal(*Keyval,*mn,*bfid);
+    msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
+   }#bfid if
+   if(*mn like 'SURF-DMF' && str(*mv) not like str(*dmfs)){              #Checking that DMF Status matches, correcting if not
+    msiAddKeyVal(*Keyval,*mn,*dmfs);
+    msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
+   }#dmfstat if
+  }#metadata
+  "(*dmfs)               *dma%";                                         #Our return sentence of status
+ } #else
 }#dmattr
