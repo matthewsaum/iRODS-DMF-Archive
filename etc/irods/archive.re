@@ -57,10 +57,8 @@ pep_resource_create_post(*OUT){
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
  on($KVPairs.resc_hier like "Archive"){
-  msiGetSessionVarValue("all","server");
   if($connectOption == "iput"){
    writeLine("serverLog","$userNameClient:$clientAddr attempted to create "++$KVPairs.logical_path++" on the DMF Archive directly.");
-   cut;
   } #if
   else if($connectOption != "iput"){
    *svr="SERVER.FQDN.HERE";
@@ -73,7 +71,6 @@ pep_resource_open_pre(*OUT){
     || *dmfs like "MIG"
    ){                            #Log access if data is online
     writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
-    cut;
    }#if
    else if (
        *dmfs like "UNM"
@@ -102,8 +99,7 @@ pep_resource_open_pre(*OUT){
   } #if
  } #on
  on($KVPairs.resc_hier not like "Archive"){
-  msiGetSessionVarValue("all","server");
-  cut;
+  #do nothing
  } #on
  #msiGoodFailure;       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
 } #PEP
