@@ -57,11 +57,13 @@ pep_resource_create_post(*OUT){
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
  on($KVPairs.resc_hier like "Archive"){
+  msiGetSessionVarValue("all","server");
   if($connectOption == "iput"){
    writeLine("serverLog","$userNameClient:$clientAddr attempted to create "++$KVPairs.logical_path++" on the DMF Archive directly.");
+   cut;
   } #if
   else if($connectOption != "iput"){
-   *svr="YOUR.FQDN";
+   *svr="SERVER.FQDN.HERE";
    *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
    *dmfs=substr(*dma, 1, 4);
    *stg=triml(*dma, "        ");
@@ -71,12 +73,14 @@ pep_resource_open_pre(*OUT){
     || *dmfs like "MIG"
    ){                            #Log access if data is online
     writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
+    cut;
    }#if
    else if (
        *dmfs like "UNM"
     || *dmfs like "OFL"
     || *dmfs like "PAR"
    ){            #Errors out if data not staged
+     cut;
      #-=-=-=-=-=-=-=-=-
      #These two lines are for auto-staging
 
@@ -84,15 +88,22 @@ pep_resource_open_pre(*OUT){
      failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
 
      #-=-=-=-=-=-=-=-=-
-     #This line is for not auto-staging data.
+     #This block is for not auto-staging data.
+
       # writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
       # writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
       # msiOprDisallowed;
+
    } #else if
    else {
+    cut;
     failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
    }#else
   } #if
+ } #on
+ on($KVPairs.resc_hier not like "Archive"){
+  msiGetSessionVarValue("all","server");
+  cut;
  } #on
  #msiGoodFailure;       #Uncomment to prevent later rule conflicts if PEP in use elsewhere
 } #PEP
@@ -103,7 +114,7 @@ pep_resource_open_pre(*OUT){
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*inp=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
- *svr="YOUR.FQDN";     #Resource Server FQDN
+ *svr="SERVER.FQDN.HERE";     #Resource Server FQDN
  *resc="Archive";                                   #The name of the resource
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
