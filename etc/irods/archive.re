@@ -37,7 +37,7 @@
 #----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
 #1.5- 21Nov2017- Now included- an auto stage feature on iget for tape-stored data. *auto var in the PEP.
 #2.0- 19Jan2017- Re-structured entire code. Far better function calling, less redundant lines, rule-conflict handling
-#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general
+#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general, removed an SQL query
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
@@ -50,8 +50,8 @@
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
  on($KVPairs.resc_hier like "Archive"){
-  *svr="IRODS.FQDN.HERE";
-  *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
+  *svr="sara-irods1.grid.surfsara.nl";
+  *dma=dmattr($KVPairs.physical_path, *svr, $KVPairs.logical_path);                            #DMF meta attribute update
   *dmfs=substr(*dma, 1, 4);
   *stg=triml(*dma, "        ");
   if (
@@ -91,7 +91,7 @@ pep_resource_open_pre(*OUT){
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*inp=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
- *svr="IRODS.FQDN.HERE";     #Resource Server FQDN
+ *svr="sara-irods1.grid.surfsara.nl";     #Resource Server FQDN
  *resc="Archive";                                   #The name of the resource
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
@@ -113,7 +113,7 @@ iarch(){
         AND COLL_NAME like '*coll'
         AND DATA_NAME like '*obj'
   ){
-   *dmfs=dmattr(*row.DATA_PATH, *svr);                                  #pulls DMF attributes into meta-data
+   *dmfs=dmattr(*row.DATA_PATH, *svr, *tar);                                  #pulls DMF attributes into meta-data
    if(  *inp==1 ){
     dmget(*row.DATA_PATH, *svr, substr(*dmfs,1,4));
     *dmfs="(UNM)"++triml(*dmfs,")");    #changes display to show UNM (prevents re-SQL-querying)
@@ -132,7 +132,8 @@ iarch(){
         RESC_NAME like '*resc'
     AND COLL_NAME like '*tar%'
   ){
-   *dmfs=dmattr(*row.DATA_PATH, *svr);
+   *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
+   *dmfs=dmattr(*row.DATA_PATH, *svr, *ipath);
    if(*inp==1){                                          #input to only check status or actually stage
     dmget(*row.DATA_PATH, *svr, substr(*dmfs,1,4));
     *dmfs="(UNM)"++triml(*dmfs,")");                     #changes display to show UNM (prevents re-SQL-querying)
@@ -165,7 +166,7 @@ dmget(*data, *svr, *dmfs){
 #It also will be with any DMGET requests via the iarchive rules above.
 #That data is: The BFID of the data on tape, and the DMF Status
 #INPUT ORDER- physical path, resource server FQDN
-dmattr(*data, *svr){
+dmattr(*data, *svr, *ipath){
  msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
  msiGetStdoutInExecCmdOut(*dmRes,*Out);
  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
@@ -186,27 +187,12 @@ dmattr(*data, *svr){
   }#if
   *mig=double(*dma)/double(*dmt)*100;                     #Give us a % of completed migration from tape to disk
   *dma=trimr("*mig", '.');
-  foreach(
-   *boat in
-   SELECT
-    META_DATA_ATTR_NAME,
-    META_DATA_ATTR_VALUE,
-    COLL_NAME, DATA_NAME
-   where
-    DATA_PATH like *data
-   ){
-   *ipath=*boat.COLL_NAME++"/"++*boat.DATA_NAME;
-   *mn=*boat.META_DATA_ATTR_NAME;
-   *mv=*boat.META_DATA_ATTR_VALUE;
-   if(*mn like 'SURF-BFID' && str(*mv) not like str(*bfid)){             #Checking that BFID matches, correcting if not
-    msiAddKeyVal(*Keyval,*mn,*bfid);
-    msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
-   }#bfid if
-   if(*mn like 'SURF-DMF' && str(*mv) not like str(*dmfs)){              #Checking that DMF Status matches, correcting if not
-    msiAddKeyVal(*Keyval,*mn,*dmfs);
-    msiSetKeyValuePairsToObj(*Keyval,*ipath,"-d");
-   }#dmfstat if
-  }#metadata
+
+  msiAddKeyVal(*Keyval1,"SURF-BFID",*bfid);
+  msiSetKeyValuePairsToObj(*Keyval1,*ipath,"-d");
+  msiAddKeyVal(*Keyval2,"SURF-DMF",*dmfs);
+  msiSetKeyValuePairsToObj(*Keyval2,*ipath,"-d");
+
   "(*dmfs)               *dma%";                                         #Our return sentence of status
  } #else
 }#dmattr
