@@ -3,8 +3,8 @@
 #Apache License 2.0
 
 #INSTRUCTIONS FOR USE
-#Lines 47, 48, 89, and 90 all have two things to adjust per environment
-#47 and 89 are the Resource Name
+#Lines 52, 53, 82, 94, and 95 all have two things to adjust per environment
+#52, 82, 95 are the Resource Name
 #48 and 90 are the server name (of the actual NFS-linked server to tape)
 #Rule Conflicts:
 #Line 83 should be uncommented if PEP_OPEN_PRE is used in your policies
@@ -37,7 +37,7 @@
 #----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
 #1.5- 21Nov2017- Now included- an auto stage feature on iget for tape-stored data. *auto var in the PEP.
 #2.0- 19Jan2017- Re-structured entire code. Far better function calling, less redundant lines, rule-conflict handling
-#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general, removed an SQL query
+#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general, removed an SQL query entirely
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
@@ -60,7 +60,7 @@ pep_resource_open_pre(*OUT){
    || *dmfs like "MIG"
    || *dmfs like "NEW"
   ){                            #Log access if data is online
-   writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
+   writeLine("serverLog","$userNameClient:$clientAddr accessed ($connectOption) "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
   }#if
   else if (
       *dmfs like "UNM"
@@ -73,7 +73,7 @@ pep_resource_open_pre(*OUT){
 #   failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
    #-=-=-=-=-=-=-=-=-
     #This block is for not auto-staging data.
-    failmsg(-1,$userNameClient++":"++$clientAddr++" tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
+    failmsg(-1,$userNameClient++":"++$clientAddr++" tried to access ($connectOption) "++$KVPairs.logical_path++" but it was not staged from tape.");
    } #else if
   else {
    failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
@@ -172,7 +172,7 @@ dmattr(*data, *svr, *ipath){
  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
  if(*Out like "sgi_dmf*"){
   # If DMF returns an error because the data does not exist yet (it is being created), we return a new status.
-  "(NEW)                100%";                                         #Our return sentence of status
+  "(NEW)               100%";                                         #Our return sentence of status
  } #if
  else{
   # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
