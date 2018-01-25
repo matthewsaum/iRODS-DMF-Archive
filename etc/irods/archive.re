@@ -2,6 +2,15 @@
 #Copyright 2017 SURFBV
 #Apache License 2.0
 
+#INSTRUCTIONS FOR USE
+#Lines 47, 48, 89, and 90 all have two things to adjust per environment
+#47 and 89 are the Resource Name
+#48 and 90 are the server name (of the actual NFS-linked server to tape)
+#Rule Conflicts:
+#Line 83 should be uncommented if PEP_OPEN_PRE is used in your policies
+#this will allow those other PEPS to run even if this one is hit first.
+
+
 #20 Sep 2017
 #DMF interaction for iRODS, when mounted via NFS.
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -28,16 +37,11 @@
 #----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
 #1.5- 21Nov2017- Now included- an auto stage feature on iget for tape-stored data. *auto var in the PEP.
 #2.0- 19Jan2017- Re-structured entire code. Far better function calling, less redundant lines, rule-conflict handling
+#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
 #Possibly force .tar-ball of data before placed on archive resource?
-
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#this creates two meta-data tags, one for the DMF BFID, which is good record keeping.
-# the other is required by operations here. It is our DMF status.
-#This is to prevent iRODS from trying to read data on tape without being staged to disk.
-
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #This is our Policy Enforcement Point for preventing iRODS from reading data
@@ -46,7 +50,7 @@
 #per each file, until interrupted or data is staged.
 pep_resource_open_pre(*OUT){
  on($KVPairs.resc_hier like "Archive"){
-  *svr="sara-irods1.grid.surfsara.nl";
+  *svr="IRODS.FQDN.HERE";
   *dma=dmattr($KVPairs.physical_path, *svr);                            #DMF meta attribute update
   *dmfs=substr(*dma, 1, 4);
   *stg=triml(*dma, "        ");
@@ -57,26 +61,21 @@ pep_resource_open_pre(*OUT){
    || *dmfs like "NEW"
   ){                            #Log access if data is online
    writeLine("serverLog","$userNameClient:$clientAddr accessed "++$KVPairs.logical_path++" (*dmfs) from the Archive.");
-   cut;
   }#if
   else if (
       *dmfs like "UNM"
    || *dmfs like "OFL"
    || *dmfs like "PAR"
   ){            #Errors out if data not staged
-    cut;
-    #-=-=-=-=-=-=-=-=-
+   #-=-=-=-=-=-=-=-=-
     #These two lines are for auto-staging
-     dmget($KVPairs.physical_path,*svr, *dmfs);
-    failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
-     #-=-=-=-=-=-=-=-=-
+#   dmget($KVPairs.physical_path,*svr, *dmfs);
+#   failmsg(-1,$KVPairs.logical_path++" is still on tape, but queued to be staged. Current data staged: *stg." );
+   #-=-=-=-=-=-=-=-=-
     #This block is for not auto-staging data.
-      # writeLine("serverLog","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-     # writeLine("stdout","$userNameClient:$clientAddr tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
-     # msiOprDisallowed;
+    failmsg(-1,$userNameClient++":"++$clientAddr++" tried to access "++$KVPairs.logical_path++" but it was not staged from tape.");
    } #else if
   else {
-   cut;
    failmsg(-1,$KVPairs.logical_path++" is either not on the tape archive, or something broke internal to the system.");
   }#else
  } #on
@@ -92,7 +91,7 @@ pep_resource_open_pre(*OUT){
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*inp=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
- *svr="sara-irods1.grid.surfsara.nl";     #Resource Server FQDN
+ *svr="IRODS.FQDN.HERE";     #Resource Server FQDN
  *resc="Archive";                                   #The name of the resource
  #Removes a trailing "/" from collections if entered.
  if(*tar like '*/'){
