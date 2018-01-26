@@ -3,8 +3,8 @@
 #Apache License 2.0
 
 #INSTRUCTIONS FOR USE
-#Lines 52, 53, 82, 94, and 95 all have two things to adjust per environment
-#52, 82, 95 are the Resource Name
+#Lines 47, 48, 89, and 90 all have two things to adjust per environment
+#47 and 89 are the Resource Name
 #48 and 90 are the server name (of the actual NFS-linked server to tape)
 #Rule Conflicts:
 #Line 83 should be uncommented if PEP_OPEN_PRE is used in your policies
@@ -37,7 +37,7 @@
 #----------------Also, functions and calls are now more appropriately named towards DMGET and DMATTR instead of dmg and attr
 #1.5- 21Nov2017- Now included- an auto stage feature on iget for tape-stored data. *auto var in the PEP.
 #2.0- 19Jan2017- Re-structured entire code. Far better function calling, less redundant lines, rule-conflict handling
-#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general, removed an SQL query entirely
+#2.1- 25Jan2017- Re-work meta-data application. Issues with iphymv because of rule handling in general
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #TO-DO:
 #Size limitations? Min/max?
@@ -52,6 +52,7 @@ pep_resource_open_pre(*OUT){
  on($KVPairs.resc_hier like "Archive"){
   *svr="sara-irods1.grid.surfsara.nl";
   *dma=dmattr($KVPairs.physical_path, *svr, $KVPairs.logical_path);                            #DMF meta attribute update
+ # *dma="(NEW)               100%";
   *dmfs=substr(*dma, 1, 4);
   *stg=triml(*dma, "        ");
   if (
@@ -170,29 +171,28 @@ dmattr(*data, *svr, *ipath){
  msiExecCmd("dmattr", "*data", "*svr", "", "", *dmRes);
  msiGetStdoutInExecCmdOut(*dmRes,*Out);
  # Our *Out variable looks osmething like this "109834fjksjv09sdrf+DUL+0+2014"
- if(*Out like "sgi_dmf*"){
-  # If DMF returns an error because the data does not exist yet (it is being created), we return a new status.
-  "(NEW)               100%";                                         #Our return sentence of status
- } #if
- else{
-  # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
-  *Out=trimr(*Out,'\n');                                 #Trims the newline
-  *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');           #DMF BFID, trims from right to left, to and including the + symbol
-  *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');           #DMF STATUS, trims up the DMF status only
-  *dmt=triml(triml(triml(*Out,'+'),'+'),'+');            #trims to the total file size in DMF
-  *dma=trimr(triml(triml(*Out,'+'),'+'),'+');            #trims to the available file size on disk
-  if(*dmt like "0"){                                     #Prevents division by zero in case of empty files.
-   *dmt="1";
-   *dma="1";
-  }#if
-  *mig=double(*dma)/double(*dmt)*100;                     #Give us a % of completed migration from tape to disk
-  *dma=trimr("*mig", '.');
+ # The + is a separator, and the order of the 4 values are BFID, DMF status, size of data on disk, total size of data.
+ *Out=trimr(*Out,'\n');                                 #Trims the newline
+ *bfid=trimr(trimr(trimr(*Out,'+'),'+'),'+');           #DMF BFID, trims from right to left, to and including the + symbol
+ if(*bfid like ""){
+  *bfid = "0";
+ }
+ *dmfs=triml(trimr(trimr(*Out,'+'),'+'),'+');           #DMF STATUS, trims up the DMF status only
+ if(*dmfs like ""){
+  *dmfs = "INV";
+ }
+ *dmt=triml(triml(triml(*Out,'+'),'+'),'+');            #trims to the total file size in DMF
+ *dma=trimr(triml(triml(*Out,'+'),'+'),'+');            #trims to the available file size on disk
+ if(*dmt like "0" || *Out like ""){                                     #Prevents division by zero in case of empty files.
+  *dmt="1";
+  *dma="1";
+ }#if
+ *mig=double(*dma)/double(*dmt)*100;                     #Give us a % of completed migration from tape to disk
+ *dma=trimr("*mig", '.');
+ msiAddKeyVal(*Keyval1,"SURF-BFID",*bfid);
+ msiSetKeyValuePairsToObj(*Keyval1,*ipath,"-d");
+ msiAddKeyVal(*Keyval2,"SURF-DMF",*dmfs);
+ msiSetKeyValuePairsToObj(*Keyval2,*ipath,"-d");
 
-  msiAddKeyVal(*Keyval1,"SURF-BFID",*bfid);
-  msiSetKeyValuePairsToObj(*Keyval1,*ipath,"-d");
-  msiAddKeyVal(*Keyval2,"SURF-DMF",*dmfs);
-  msiSetKeyValuePairsToObj(*Keyval2,*ipath,"-d");
-
-  "(*dmfs)               *dma%";                                         #Our return sentence of status
- } #else
+ "(*dmfs)               *dma%";                                         #Our return sentence of status
 }#dmattr
