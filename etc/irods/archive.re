@@ -10,6 +10,10 @@
 #Line 83 should be uncommented if PEP_OPEN_PRE is used in your policies
 #this will allow those other PEPS to run even if this one is hit first.
 
+#IMPORTANT NOTES OF DNS & MSIEXECCMD
+#msiExecCmd runs here called remotely. It is REQUIRED that your tape-resource server
+#has an up-to-date /etc/hosts file with resolution to the other iRODS servers.
+#Yes, even if you have proper DNS.
 
 #20 Sep 2017
 #DMF interaction for iRODS, when mounted via NFS.
