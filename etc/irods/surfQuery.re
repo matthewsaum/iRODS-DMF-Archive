@@ -3,9 +3,19 @@
 #This cann be called via || irule iarch "*tar=/path/to/object/or/coll%*stage=0" "ruleExecOut"
 #The two variabels are : target data, input [0|1] to check status or actually stage.
 iarch(){
-  *svr="ARCHIVE_CONNECTED_FQDN";     #Resource Server FQDN
   *resc="RESOURCE_NAME";                                   #The name of the resource
-  #Removes a trailing "/" from collections if entered.
+
+  #Find our resource location (FQDN)
+  foreach(
+    *r in SELECT
+      RESC_LOC
+    WHERE
+      RESC_NAME = *resc
+  ){
+    *svr=*r.RESC_LOC;
+  }
+
+ #Removes a trailing "/" from collections if entered.
   if(*tar like '*/'){
     *tar = trimr(*tar,'/');
   }#if
