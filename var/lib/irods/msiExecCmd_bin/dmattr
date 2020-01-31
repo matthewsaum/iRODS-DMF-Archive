@@ -1,0 +1,9 @@
+#!/bin/sh
+#Author Matthew Saum
+#Copyright 2017-2019 SURFsara BV
+#Apache License 2.0
+#Version 2.1- handles space-separated list of entries.
+
+#echo "execCmdRule: "$execCmdRule
+#The awk pulls our various values. $1 is the BFID, $12 is the DMF state, $11 is the amount bytes on disk, $10 is the total size.
+echo "$@" | xargs dmattr | awk '{print $1, $12, $11, $10}' | tr " " "+"

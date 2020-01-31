@@ -1,0 +1,7 @@
+#!/bin/sh
+#belongs in:
+#irods~/iRODS/server/bin/cmd/dmput
+#This is on our Archive Resource Server, called by the archive rules
+#I made this for MDH testing. This will allow them to "force data from disk to tape"
+#the $@ is the arguments input from the msiExecCmd called in the rule
+echo "$@" | xargs dmput -r
